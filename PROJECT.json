@@ -1,0 +1,18 @@
+{
+  "title": "Rex Region",
+  "platform": "GBA",
+  "status": "source prototype",
+  "dex_slots": 1024,
+  "gyms": 16,
+  "starters": [
+    "Flamcub",
+    "Aquafin",
+    "Leafling"
+  ],
+  "evolution_levels": [
+    16,
+    36
+  ],
+  "mega_evolution": true,
+  "villain": "Varek / Team Eclipse"
+}
