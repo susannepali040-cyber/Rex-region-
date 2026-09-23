@@ -1,37 +1,67 @@
 .SUFFIXES:
 
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment")
+$(error DEVKITARM is not set)
 endif
 
 include $(DEVKITARM)/gba_rules
 
 TARGET := rex_region
-
 BUILD := build
+
 SOURCES := .
 INCLUDES := .
 
-CFILES := main.c
-OFILES := $(CFILES:.c=.o)
+ARCH := -mthumb -mthumb-interwork
+CFLAGS := -g -Wall -O2 -mcpu=arm7tdmi -mtune=arm7tdmi $(ARCH)
+CFLAGS += $(INCLUDE)
+
+LDFLAGS := -g $(ARCH)
 
 LIBS := -lgba
+LIBDIRS := $(LIBGBA)
 
-export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+
+export OUTPUT := $(CURDIR)/$(TARGET)
+export VPATH := $(CURDIR)
+export DEPSDIR := $(CURDIR)/$(BUILD)
+
+CFILES := $(notdir $(wildcard *.c))
+OFILES := $(CFILES:.c=.o)
+
+export LD := $(CC)
+
+export INCLUDE := \
+$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+-I$(CURDIR)/$(BUILD)
+
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: all clean
 
-all: $(TARGET).gba
+all: $(OUTPUT).gba
 
-$(TARGET).gba: $(TARGET).elf
-	@gbafix $< -o $@
+$(OUTPUT).gba: $(OUTPUT).elf
 
-$(TARGET).elf: $(OFILES)
-	$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+$(OUTPUT).elf: $(OFILES)
 
-%.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
+$(BUILD):
+	mkdir -p $@
+	$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	rm -rf $(BUILD) *.o *.elf *.gba
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).gba
+
+else
+
+DEPENDS := $(OFILES:.o=.d)
+
+$(OUTPUT).gba: $(OUTPUT).elf
+
+$(OUTPUT).elf: $(OFILES)
+
+-include $(DEPENDS)
+
+endif
