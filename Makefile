@@ -1,30 +1,37 @@
-export DEVKITPRO ?= /opt/devkitpro
-export DEVKITARM ?= $(DEVKITPRO)/devkitARM
+.SUFFIXES:
+
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment")
+endif
+
 include $(DEVKITARM)/gba_rules
 
 TARGET := rex_region
-SOURCES := source
-INCLUDES := include
-CFILES := $(notdir $(wildcard $(SOURCES)/*.c))
+
+BUILD := build
+SOURCES := .
+INCLUDES := .
+
+CFILES := main.c
 OFILES := $(CFILES:.c=.o)
 
-CFLAGS := -g -Wall -O2 -mcpu=arm7tdmi -mtune=arm7tdmi -fomit-frame-pointer
-CFLAGS += -I$(INCLUDES)
 LIBS := -lgba
-LIBDIRS := $(LIBGBA)
+
+export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir))
+export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: all clean
+
 all: $(TARGET).gba
 
-%.o: $(SOURCES)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET).gba: $(TARGET).elf
+	@gbafix $< -o $@
 
 $(TARGET).elf: $(OFILES)
-	$(LD) $^ $(LIBDIRS) $(LIBS) $(LDFLAGS) -o $@
+	$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
-$(TARGET).gba: $(TARGET).elf
-	$(OBJCOPY) -O binary $< $@
-	$(GBAFIX) $@
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
-	rm -f $(OFILES) $(TARGET).elf $(TARGET).gba
+	rm -rf $(BUILD) *.o *.elf *.gba
